@@ -1,0 +1,46 @@
+# C# build folders
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.log
+
+# C/C++ build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.out
+*.app
+*.i*86
+*.x86_64
+*.dbg
+
+# PlatformIO specific
+.build/
+.pio/
+
+# KiCad generated files
+*.bak
+*.cache
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.pro
+*.net
+*.pro.user
+*.xml
+*.dxf
+*.dra
+
+# IDE and editor folders
+.vscode/
+.idea/
+
+# Miscellaneous
+*.DS_Store
+*.swp
