@@ -7,8 +7,8 @@ DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS4);
 
 // Adjust these parameters based on actual INA219 and multimeter readings for calibration
 float extMeterReading_mA = 3000;
-float ina219Reading_mA = 2980;
-
+// float ina219Reading_mA = 2980; // Value for thin resistor
+float ina219Reading_mA = 4685; // Value for fat resistor
 void setup(void) 
 {
     Serial.begin(115200);
@@ -22,7 +22,7 @@ void setup(void)
     }
     // Linear calibration
     ina219.linearCalibrate(ina219Reading_mA, extMeterReading_mA);
-    ina219.setPGA(ina219.eIna219PGABits_1);
+    ina219.setPGA(ina219.eIna219PGABits_8);
     ina219.setBADC(ina219.eIna219AdcBits_12, ina219.eIna219AdcSample_32);
     ina219.setSADC(ina219.eIna219AdcBits_12, ina219.eIna219AdcSample_128);
     Serial.println();
@@ -56,31 +56,13 @@ void loop(void)
     uint8_t socAsigmoidal = asigmoidal(voltage, minVoltage, maxVoltage);
 
     // Print the basic readings
-    Serial.print("BusVoltage:   ");
-    Serial.print(busVoltage, 2);
-    Serial.println(" V");
+    // Order: BusVoltage, ShuntVoltage, Current, Power, SoC (Sigmoidal), SoC (Asymmetric Sigmoidal)
 
-    Serial.print("ShuntVoltage: ");
-    Serial.print(ina219.getShuntVoltage_mV(), 3);
-    Serial.println(" mV");
-
-    Serial.print("Current:      ");
-    Serial.print(ina219.getCurrent_mA(), 1);
-    Serial.println(" mA");
-
-    Serial.print("Power:        ");
-    Serial.print(ina219.getPower_mW(), 1);
-    Serial.println(" mW");
-
-    // Print the SoC estimations
-    Serial.print("State of Charge (Sigmoidal): ");
-    Serial.print(socSigmoidal);
-    Serial.println("%");
-
-    Serial.print("State of Charge (Asymmetric Sigmoidal): ");
-    Serial.print(socAsigmoidal);
-    Serial.println("%");
-
-    Serial.println("");
+    Serial.print(busVoltage, 4); Serial.print(":");
+    Serial.print(ina219.getShuntVoltage_mV(), 4); Serial.print(":");
+    Serial.print(ina219.getCurrent_mA(), 3); Serial.print(":");
+    Serial.print(ina219.getPower_mW(), 3); Serial.print(":");
+    Serial.print(socSigmoidal); Serial.print(":");
+    Serial.println(socAsigmoidal);
     delay(500);
 }
