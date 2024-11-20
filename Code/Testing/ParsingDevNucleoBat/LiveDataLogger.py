@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Configuration
 SERIAL_PORT = "/dev/cu.usbmodem1103"  # Replace with your microcontroller's serial port
+# SERIAL_PORT = "/dev/ttyACM2" on svea
 BAUD_RATE = 115200
 BATTERY_CSV_FILE = "battery_readings.csv"
 CHARGER_CSV_FILE = "charger_readings.csv"
