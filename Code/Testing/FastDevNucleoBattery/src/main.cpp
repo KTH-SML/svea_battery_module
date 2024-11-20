@@ -80,5 +80,5 @@ void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
 void loop() {
     printSensorReadings(ina219_battery, "Battery");
     printSensorReadings(ina219_charger, "Charger");
-    delay(500);
+    delay(100);
 }
