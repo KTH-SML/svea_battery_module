@@ -3,51 +3,59 @@
 #include "DFRobot_INA219.h"
 #include <math.h> // Include math.h for pow function
 
-DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS4);
+// Create INA219 instances
+DFRobot_INA219_IIC ina219_battery(&Wire, INA219_I2C_ADDRESS4);
+DFRobot_INA219_IIC ina219_charger(&Wire, INA219_I2C_ADDRESS3);
 
-// Adjust these parameters based on actual INA219 and multimeter readings for calibration
+// Calibration parameters
 float extMeterReading_mA = 3000;
-// float ina219Reading_mA = 2980; // Value for thin resistor
-float ina219Reading_mA = 4685; // Value for fat resistor
-void setup(void) 
-{
+float ina219Reading_mA_battery = 4685; // Value for fat resistor (battery)
+float ina219Reading_mA_charger = 2980; // Value for thin resistor (charger)
+
+// Voltage limits for SoC estimation (for a 3S LiPo battery)
+const uint16_t minVoltage = 9000;  // 9.0V
+const uint16_t maxVoltage = 12600; // 12.6V
+
+void setup() {
     Serial.begin(115200);
-    while(!Serial);
-    
-    Serial.println();
-    // Initialize the sensor
-    while(ina219.begin() != true) {
-        Serial.println("INA219 begin failed");
-        delay(2000);
+    while (!Serial);
+
+    // Initialize the battery INA219 sensor
+    if (!ina219_battery.begin()) {
+        Serial.println("INA219 battery begin failed");
+        while (1);
     }
-    // Linear calibration
-    ina219.linearCalibrate(ina219Reading_mA, extMeterReading_mA);
-    ina219.setPGA(ina219.eIna219PGABits_8);
-    ina219.setBADC(ina219.eIna219AdcBits_12, ina219.eIna219AdcSample_32);
-    ina219.setSADC(ina219.eIna219AdcBits_12, ina219.eIna219AdcSample_128);
-    Serial.println();
+    // Linear calibration for battery INA219
+    ina219_battery.linearCalibrate(ina219Reading_mA_battery, extMeterReading_mA);
+    ina219_battery.setPGA(ina219_battery.eIna219PGABits_8);
+    ina219_battery.setBADC(ina219_battery.eIna219AdcBits_12, ina219_battery.eIna219AdcSample_32);
+    ina219_battery.setSADC(ina219_battery.eIna219AdcBits_12, ina219_battery.eIna219AdcSample_128);
+
+    // Initialize the charger INA219 sensor
+    if (!ina219_charger.begin()) {
+        Serial.println("INA219 charger begin failed");
+        while (1);
+    }
+    // Linear calibration for charger INA219
+    ina219_charger.linearCalibrate(ina219Reading_mA_charger, extMeterReading_mA);
+    ina219_charger.setPGA(ina219_charger.eIna219PGABits_8);
+    ina219_charger.setBADC(ina219_charger.eIna219AdcBits_12, ina219_charger.eIna219AdcSample_32);
+    ina219_charger.setSADC(ina219_charger.eIna219AdcBits_12, ina219_charger.eIna219AdcSample_128);
 }
 
-// Sigmoidal function for SoC estimation (taken from https://www.desmos.com/calculator/oyhpsu8jnw)
 static inline uint8_t sigmoidal(uint16_t voltage, uint16_t minVoltage, uint16_t maxVoltage) {
     uint8_t result = 105 - (105 / (1 + pow(1.724 * (voltage - minVoltage)/(maxVoltage - minVoltage), 5.5)));
     return result >= 100 ? 100 : result;
 }
 
-// Asymmetric sigmoidal function for SoC estimation (taken from https://www.desmos.com/calculator/oyhpsu8jnw)
 static inline uint8_t asigmoidal(uint16_t voltage, uint16_t minVoltage, uint16_t maxVoltage) {
     uint8_t result = 101 - (101 / pow(1 + pow(1.33 * (voltage - minVoltage)/(maxVoltage - minVoltage), 4.5), 3));
     return result >= 100 ? 100 : result;
 }
 
-void loop(void)
-{
-    float busVoltage = ina219.getBusVoltage_V();
+void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
+    float busVoltage = sensor.getBusVoltage_V();
     uint16_t voltage = static_cast<uint16_t>(busVoltage * 1000); // Convert to mV if needed
-
-    // Set min and max voltage for a 3S LiPo battery
-    uint16_t minVoltage = 9000; // 9.0V
-    uint16_t maxVoltage = 12600; // 12.6V
 
     // Calculate SoC using the sigmoidal function
     uint8_t socSigmoidal = sigmoidal(voltage, minVoltage, maxVoltage);
@@ -55,14 +63,22 @@ void loop(void)
     // Calculate SoC using the asymmetric sigmoidal function
     uint8_t socAsigmoidal = asigmoidal(voltage, minVoltage, maxVoltage);
 
-    // Print the basic readings
-    // Order: BusVoltage, ShuntVoltage, Current, Power, SoC (Sigmoidal), SoC (Asymmetric Sigmoidal)
-
+    // Print the readings
+    Serial.print(sensorName); Serial.print(":");
     Serial.print(busVoltage, 4); Serial.print(":");
-    Serial.print(ina219.getShuntVoltage_mV(), 4); Serial.print(":");
-    Serial.print(ina219.getCurrent_mA(), 3); Serial.print(":");
-    Serial.print(ina219.getPower_mW(), 3); Serial.print(":");
-    Serial.print(socSigmoidal); Serial.print(":");
-    Serial.println(socAsigmoidal);
+    Serial.print(sensor.getShuntVoltage_mV() / 1000.0, 4); Serial.print(":");
+    Serial.print(sensor.getCurrent_mA() / 1000.0, 3); Serial.print(":");
+    Serial.print(sensor.getPower_mW() / 1000.0, 3); 
+    if(sensorName == "Battery") {
+        Serial.print(":"); Serial.print(socSigmoidal); Serial.print(":");
+        Serial.println(socAsigmoidal);
+    } else {
+        Serial.println();
+    }
+}
+
+void loop() {
+    printSensorReadings(ina219_battery, "Battery");
+    printSensorReadings(ina219_charger, "Charger");
     delay(500);
 }
