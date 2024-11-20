@@ -21,9 +21,8 @@ void setup() {
     while (!Serial);
 
     // Initialize the battery INA219 sensor
-    if (!ina219_battery.begin()) {
+    while (!ina219_battery.begin()) {
         Serial.println("INA219 battery begin failed");
-        while (1);
     }
     // Linear calibration for battery INA219
     ina219_battery.linearCalibrate(ina219Reading_mA_battery, extMeterReading_mA);
@@ -32,9 +31,8 @@ void setup() {
     ina219_battery.setSADC(ina219_battery.eIna219AdcBits_12, ina219_battery.eIna219AdcSample_128);
 
     // Initialize the charger INA219 sensor
-    if (!ina219_charger.begin()) {
+    while (!ina219_charger.begin()) {
         Serial.println("INA219 charger begin failed");
-        while (1);
     }
     // Linear calibration for charger INA219
     ina219_charger.linearCalibrate(ina219Reading_mA_charger, extMeterReading_mA);
@@ -78,6 +76,10 @@ void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
 }
 
 void loop() {
+    //Adds a little bit of redundancy if the sensors are not working properly
+    if(ina219_battery.lastOperateStatus != ina219_battery.eIna219_ok || ina219_charger.lastOperateStatus != ina219_charger.eIna219_ok) {
+        setup();
+    }
     printSensorReadings(ina219_battery, "Battery");
     printSensorReadings(ina219_charger, "Charger");
     delay(100);
