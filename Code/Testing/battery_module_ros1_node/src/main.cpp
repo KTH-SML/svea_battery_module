@@ -4,6 +4,7 @@
 #include <ros.h>
 #include <std_msgs/Float32.h>
 
+const int updateFrequency = 50;  // 1 Hz
 // Create INA219 instances
 DFRobot_INA219_IIC ina219_battery(&Wire, INA219_I2C_ADDRESS4);
 DFRobot_INA219_IIC ina219_charger(&Wire, INA219_I2C_ADDRESS3);
@@ -99,5 +100,5 @@ void loop() {
     setup_ina219();
   }
   nh.spinOnce();
-  delay(1000);  // Send message every 1 second
+  delay(1000/updateFrequency);  // Convert Hz to ms for delay
 }
