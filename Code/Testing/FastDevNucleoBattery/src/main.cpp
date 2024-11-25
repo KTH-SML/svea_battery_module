@@ -1,6 +1,6 @@
+#include "DFRobot_INA219.h"
 #include <Arduino.h>
 #include <Wire.h>
-#include "DFRobot_INA219.h"
 #include <math.h> // Include math.h for pow function
 
 // Create INA219 instances
@@ -17,8 +17,9 @@ const uint16_t minVoltage = 9000;  // 9.0V
 const uint16_t maxVoltage = 12600; // 12.6V
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial);
+    Serial.begin(921600);
+    while (!Serial)
+        ;
 
     // Initialize the battery INA219 sensor
     while (!ina219_battery.begin()) {
@@ -42,16 +43,16 @@ void setup() {
 }
 
 static inline uint8_t sigmoidal(uint16_t voltage, uint16_t minVoltage, uint16_t maxVoltage) {
-    uint8_t result = 105 - (105 / (1 + pow(1.724 * (voltage - minVoltage)/(maxVoltage - minVoltage), 5.5)));
+    uint8_t result = 105 - (105 / (1 + pow(1.724 * (voltage - minVoltage) / (maxVoltage - minVoltage), 5.5)));
     return result >= 100 ? 100 : result;
 }
 
 static inline uint8_t asigmoidal(uint16_t voltage, uint16_t minVoltage, uint16_t maxVoltage) {
-    uint8_t result = 101 - (101 / pow(1 + pow(1.33 * (voltage - minVoltage)/(maxVoltage - minVoltage), 4.5), 3));
+    uint8_t result = 101 - (101 / pow(1 + pow(1.33 * (voltage - minVoltage) / (maxVoltage - minVoltage), 4.5), 3));
     return result >= 100 ? 100 : result;
 }
 
-void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
+void printSensorReadings(DFRobot_INA219_IIC &sensor, const char *sensorName) {
     float busVoltage = sensor.getBusVoltage_V();
     uint16_t voltage = static_cast<uint16_t>(busVoltage * 1000); // Convert to mV if needed
 
@@ -62,13 +63,19 @@ void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
     uint8_t socAsigmoidal = asigmoidal(voltage, minVoltage, maxVoltage);
 
     // Print the readings
-    Serial.print(sensorName); Serial.print(":");
-    Serial.print(busVoltage, 4); Serial.print(":");
-    Serial.print(sensor.getShuntVoltage_mV() / 1000.0, 4); Serial.print(":");
-    Serial.print(sensor.getCurrent_mA() / 1000.0, 3); Serial.print(":");
-    Serial.print(sensor.getPower_mW() / 1000.0, 3); 
-    if(sensorName == "Battery") {
-        Serial.print(":"); Serial.print(socSigmoidal); Serial.print(":");
+    Serial.print(sensorName);
+    Serial.print(":");
+    Serial.print(busVoltage, 4);
+    Serial.print(":");
+    Serial.print(sensor.getShuntVoltage_mV() / 1000.0, 4);
+    Serial.print(":");
+    Serial.print(sensor.getCurrent_mA() / 1000.0, 3);
+    Serial.print(":");
+    Serial.print(sensor.getPower_mW() / 1000.0, 3);
+    if (sensorName == "Battery") {
+        Serial.print(":");
+        Serial.print(socSigmoidal);
+        Serial.print(":");
         Serial.println(socAsigmoidal);
     } else {
         Serial.println();
@@ -76,11 +83,12 @@ void printSensorReadings(DFRobot_INA219_IIC& sensor, const char* sensorName) {
 }
 
 void loop() {
-    //Adds a little bit of redundancy if the sensors are not working properly
-    if(ina219_battery.lastOperateStatus != ina219_battery.eIna219_ok || ina219_charger.lastOperateStatus != ina219_charger.eIna219_ok) {
+    // Adds a little bit of redundancy if the sensors are not working properly
+    if (!Serial || ina219_battery.lastOperateStatus != ina219_battery.eIna219_ok || ina219_charger.lastOperateStatus != ina219_charger.eIna219_ok) {
+        delay(1000);
         setup();
     }
     printSensorReadings(ina219_battery, "Battery");
     printSensorReadings(ina219_charger, "Charger");
-    delay(100);
+    delay(0.5);
 }
