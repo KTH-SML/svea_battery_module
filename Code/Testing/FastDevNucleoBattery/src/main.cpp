@@ -17,7 +17,7 @@ const uint16_t minVoltage = 9000;  // 9.0V
 const uint16_t maxVoltage = 12600; // 12.6V
 
 void setup() {
-    Serial.begin(921600);
+    Serial.begin(115200);
     while (!Serial)
         ;
 
