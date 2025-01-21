@@ -38,12 +38,13 @@ obj/
 *.dra
 
 # IDE and editor folders
-.vscode/
+*.vscode*
 .idea/
+*.pio
 
 # Miscellaneous
 *.DS_Store
 *.swp
-Code/Testing/ParsingDevNucleoBat/readings.csv
-Code/Testing/ParsingDevNucleoBat/battery_readings.csv
-Code/Testing/ParsingDevNucleoBat/charger_readings.csv
+*readings.csv
+*battery_readings.csv
+*charger_readings.csv
