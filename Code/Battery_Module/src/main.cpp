@@ -1,18 +1,24 @@
-#include <Arduino.h>
+#include "currentSensors.h"
+#include "debugTools.h"
+#include "settings.h"
+#include "usbcHandler.h"
+#include <globals.h>
 
-// put function declarations here:
-int myFunction(int, int);
+void wireSetup() {
+    WIRE.setSCL(SCL_PIN);
+    WIRE.setSDA(SDA_PIN);
+    WIRE.begin();
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    serialSetup();
+    setup_nh();
+    wireSetup();
+    if (DEBUG)
+        MYSERIAL.println("Setup complete");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    // chargingSpin();
+    sensorSpin();
 }
