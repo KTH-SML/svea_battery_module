@@ -139,10 +139,9 @@ void usbCspin() {
         MYSERIAL.println("Required voltage detected");
     // Change to that voltage
     husb238.selectPD(requiredVoltage);
-    delay(100);
     // Perform the actual PD voltage request!
     husb238.requestPD();
-    delay(100);
+
     pdRequested = true;
     if (DEBUG)
         MYSERIAL.println("PD requested");

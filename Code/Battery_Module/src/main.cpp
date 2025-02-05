@@ -11,7 +11,7 @@ void wireSetup() {
 }
 
 void setup() {
-    serialSetup();
+    // serialSetup();
     setup_nh();
     wireSetup();
     if (DEBUG)
@@ -20,5 +20,6 @@ void setup() {
 
 void loop() {
     // chargingSpin();
+
     sensorSpin();
 }

@@ -2,7 +2,7 @@
 #define SETTINGS_H
 #include <Arduino.h>
 #include <Wire.h>
-#define DEBUG true
+#define DEBUG false
 
 // I2C setup
 #define WIRE Wire
