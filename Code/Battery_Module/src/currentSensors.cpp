@@ -17,21 +17,17 @@ Adafruit_INA260 ina260_charger = Adafruit_INA260();
 
 // Create custom messages (using the energy_sensor message) and publishers
 svea_msgs::energy_sensor battery_msg;
-ros::Publisher battery_pub("/battery/data", &battery_msg);
+ros::Publisher battery_pub("/energy_sensors/battery", &battery_msg);
 
 svea_msgs::energy_sensor charger_msg;
-ros::Publisher charger_pub("/charger/data", &charger_msg);
-
-void advertise() {
-    nh.advertise(battery_pub);
-    nh.advertise(charger_pub);
-}
+ros::Publisher charger_pub("/energy_sensors/charger", &charger_msg);
 
 void setup_nh() {
     nh.getHardware()->setBaud(250000);
     nh.initNode();
     delay(2000);
-    advertise();
+    nh.advertise(battery_pub);
+    nh.advertise(charger_pub);
 }
 
 bool setup_ina219() {
@@ -79,6 +75,7 @@ bool setupSensorsSpin() {
 #endif
             return setup_success;
         }
+        // Have already established connection to the cur sensors
         prev_battery_connected = battery_connected;
         prev_charger_connected = charger_connected;
         return true;
@@ -94,8 +91,12 @@ bool setupSensorsSpin() {
 
 void update() {
     // Update battery values (converting as needed)
+
+    // Amps
     battery_msg.current = ina260_battery.readCurrent() / 1000.0;
+    // Volts
     battery_msg.voltage = ina260_battery.readBusVoltage() / 1000.0;
+    // Watts
     battery_msg.power = ina260_battery.readPower() / 1000.0;
 
     // Update charger values

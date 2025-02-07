@@ -15,7 +15,7 @@
 #define PD_REQUEST_DELAY 1000 / 0.5
 #define CHARGE_SPIN_DELAY 1000 / 1
 #define CUR_SENSOR_SPIN_DELAY 1000 / 10
-#define I2C_LOOP_DELAY 5
+#define I2C_LOOP_DELAY 1
 // USB C setup
 #define requiredVoltage PD_SRC_20V
 #define requiredVoltage_Stupid_Adafruit PD_20V
