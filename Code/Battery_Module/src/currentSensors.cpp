@@ -1,7 +1,7 @@
+#include <Wire.h>           // Ensure Wire is included
 #include <currentSensors.h> // Your sensor configuration header
 #include <ros.h>
-#include <svea_msgs/energy_sensor_readings.h> // Nested sensor reading message
-#include <svea_msgs/energy_sensors.h>         // New container message
+#include <svea_msgs/energy_sensor_readings.h> // Individual sensor reading message
 
 // Global timing variables
 unsigned long lastCallTime_Cur = 0;
@@ -15,40 +15,37 @@ bool prev_charger_connected = false;
 ros::NodeHandle nh;
 
 // Create INA260 sensor instances
-Adafruit_INA260 ina260_battery = Adafruit_INA260();
-Adafruit_INA260 ina260_charger = Adafruit_INA260();
+Adafruit_INA260 ina260_battery;
+Adafruit_INA260 ina260_charger;
 
-// Create a single energy_sensors message and publisher
-svea_msgs::energy_sensors sensors_msg;
-ros::Publisher sensors_pub("/energy_sensors", &sensors_msg);
-
-// Create two sensor reading objects (for battery and charger)
-// (Ensure these arrays are large enough; here we assume exactly 2 readings.)
+// Create separate messages and publishers
 svea_msgs::energy_sensor_readings battery_reading;
 svea_msgs::energy_sensor_readings charger_reading;
+ros::Publisher battery_pub("/battery_sensor", &battery_reading);
+ros::Publisher charger_pub("/charger_sensor", &charger_reading);
 
 void setup_nh() {
     nh.getHardware()->setBaud(250000);
     nh.initNode();
     delay(2000);
-    nh.advertise(sensors_pub);
+    nh.advertise(battery_pub);
+    nh.advertise(charger_pub);
 }
 
-bool setup_ina219() {
+bool setup_ina260() {
     // Initialize INA260 sensors
     if (!ina260_battery.begin(bat_address, &Wire)) {
 #ifdef DEBUG
-        MYSERIAL.println("Battery INA219 not found");
+        MYSERIAL.println("Battery INA260 not found");
 #endif
         return false;
     }
     if (!ina260_charger.begin(charge_address, &Wire)) {
 #ifdef DEBUG
-        MYSERIAL.println("Charger INA219 not found");
+        MYSERIAL.println("Charger INA260 not found");
 #endif
         return false;
     }
-
     // Configure sensors
     ina260_battery.setAveragingCount(INA260_COUNT_16);
     ina260_battery.setVoltageConversionTime(INA260_TIME_140_us);
@@ -70,23 +67,22 @@ bool setupSensorsSpin() {
 
     if (battery_connected && charger_connected) {
         if (!prev_battery_connected || !prev_charger_connected) {
-            bool setup_success = setup_ina219();
+            bool setup_success = setup_ina260();
             prev_battery_connected = battery_connected;
             prev_charger_connected = charger_connected;
 #ifdef DEBUG
-            MYSERIAL.println("Battery INA219 " + String(battery_connected));
-            MYSERIAL.println("Charger INA219 " + String(charger_connected));
+            MYSERIAL.println("Battery INA260 connected: " + String(battery_connected));
+            MYSERIAL.println("Charger INA260 connected: " + String(charger_connected));
 #endif
             return setup_success;
         }
-        // Already established connection
         prev_battery_connected = battery_connected;
         prev_charger_connected = charger_connected;
         return true;
     }
 #ifdef DEBUG
-    MYSERIAL.println("Battery INA219 " + String(battery_connected));
-    MYSERIAL.println("Charger INA219 " + String(charger_connected));
+    MYSERIAL.println("Battery INA260 connected: " + String(battery_connected));
+    MYSERIAL.println("Charger INA260 connected: " + String(charger_connected));
 #endif
     prev_battery_connected = battery_connected;
     prev_charger_connected = charger_connected;
@@ -94,17 +90,17 @@ bool setupSensorsSpin() {
 }
 
 void update() {
-    // Update battery values (converting as needed)
+    // Update battery values
     battery_reading.current = ina260_battery.readCurrent();
     battery_reading.voltage = ina260_battery.readBusVoltage();
     battery_reading.power = ina260_battery.readPower();
-    battery_reading.sensor_id = "battery"; // assign pointer directly
+    battery_reading.sensor_id = "battery";
 
     // Update charger values
     charger_reading.current = ina260_charger.readCurrent();
     charger_reading.voltage = ina260_charger.readBusVoltage();
     charger_reading.power = ina260_charger.readPower();
-    charger_reading.sensor_id = "charger"; // assign pointer directly
+    charger_reading.sensor_id = "charger";
 
 #ifdef DEBUG
     MYSERIAL.print("Battery: I=" + String(battery_reading.current) + "A V=" +
@@ -114,15 +110,11 @@ void update() {
                      String(charger_reading.voltage) + "V P=" +
                      String(charger_reading.power) + "W");
 #endif
-
-    // Fill the energy_sensors message's array.
-    sensors_msg.sensors_length = 2;
-    sensors_msg.sensors[0] = battery_reading;
-    sensors_msg.sensors[1] = charger_reading;
 }
 
 void publish() {
-    sensors_pub.publish(&sensors_msg);
+    battery_pub.publish(&battery_reading);
+    charger_pub.publish(&charger_reading);
 }
 
 void sensorSpin() {
