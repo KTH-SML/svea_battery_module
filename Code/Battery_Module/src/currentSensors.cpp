@@ -1,4 +1,7 @@
 #include <currentSensors.h> // Your sensor configuration header
+#include <ros.h>
+#include <svea_msgs/energy_sensor_readings.h> // Nested sensor reading message
+#include <svea_msgs/energy_sensors.h>         // New container message
 
 // Global timing variables
 unsigned long lastCallTime_Cur = 0;
@@ -15,19 +18,20 @@ ros::NodeHandle nh;
 Adafruit_INA260 ina260_battery = Adafruit_INA260();
 Adafruit_INA260 ina260_charger = Adafruit_INA260();
 
-// Create custom messages (using the energy_sensor message) and publishers
-svea_msgs::energy_sensor battery_msg;
-ros::Publisher battery_pub("/energy_sensors/battery", &battery_msg);
+// Create a single energy_sensors message and publisher
+svea_msgs::energy_sensors sensors_msg;
+ros::Publisher sensors_pub("/energy_sensors", &sensors_msg);
 
-svea_msgs::energy_sensor charger_msg;
-ros::Publisher charger_pub("/energy_sensors/charger", &charger_msg);
+// Create two sensor reading objects (for battery and charger)
+// (Ensure these arrays are large enough; here we assume exactly 2 readings.)
+svea_msgs::energy_sensor_readings battery_reading;
+svea_msgs::energy_sensor_readings charger_reading;
 
 void setup_nh() {
     nh.getHardware()->setBaud(250000);
     nh.initNode();
     delay(2000);
-    nh.advertise(battery_pub);
-    nh.advertise(charger_pub);
+    nh.advertise(sensors_pub);
 }
 
 bool setup_ina219() {
@@ -75,7 +79,7 @@ bool setupSensorsSpin() {
 #endif
             return setup_success;
         }
-        // Have already established connection to the cur sensors
+        // Already established connection
         prev_battery_connected = battery_connected;
         prev_charger_connected = charger_connected;
         return true;
@@ -91,45 +95,45 @@ bool setupSensorsSpin() {
 
 void update() {
     // Update battery values (converting as needed)
-
-    // Amps
-    battery_msg.current = ina260_battery.readCurrent() / 1000.0;
-    // Volts
-    battery_msg.voltage = ina260_battery.readBusVoltage() / 1000.0;
-    // Watts
-    battery_msg.power = ina260_battery.readPower() / 1000.0;
+    battery_reading.current = ina260_battery.readCurrent();
+    battery_reading.voltage = ina260_battery.readBusVoltage();
+    battery_reading.power = ina260_battery.readPower();
+    battery_reading.sensor_id = "battery"; // assign pointer directly
 
     // Update charger values
-    charger_msg.current = ina260_charger.readCurrent() / 1000.0;
-    charger_msg.voltage = ina260_charger.readBusVoltage() / 1000.0;
-    charger_msg.power = ina260_charger.readPower() / 1000.0;
+    charger_reading.current = ina260_charger.readCurrent();
+    charger_reading.voltage = ina260_charger.readBusVoltage();
+    charger_reading.power = ina260_charger.readPower();
+    charger_reading.sensor_id = "charger"; // assign pointer directly
 
 #ifdef DEBUG
-    MYSERIAL.print("Battery: I=" + String(battery_msg.current) + "A V=" +
-                   String(battery_msg.voltage) + "V P=" +
-                   String(battery_msg.power) + "W | ");
-    MYSERIAL.println("Charger: I=" + String(charger_msg.current) + "A V=" +
-                     String(charger_msg.voltage) + "V P=" +
-                     String(charger_msg.power) + "W");
+    MYSERIAL.print("Battery: I=" + String(battery_reading.current) + "A V=" +
+                   String(battery_reading.voltage) + "V P=" +
+                   String(battery_reading.power) + "W | ");
+    MYSERIAL.println("Charger: I=" + String(charger_reading.current) + "A V=" +
+                     String(charger_reading.voltage) + "V P=" +
+                     String(charger_reading.power) + "W");
 #endif
+
+    // Fill the energy_sensors message's array.
+    sensors_msg.sensors_length = 2;
+    sensors_msg.sensors[0] = battery_reading;
+    sensors_msg.sensors[1] = charger_reading;
 }
 
 void publish() {
-    battery_pub.publish(&battery_msg);
-    charger_pub.publish(&charger_msg);
+    sensors_pub.publish(&sensors_msg);
 }
 
 void sensorSpin() {
     nh.spinOnce();
 
-    // Run sensor setup check at defined loop delay
     if (millis() - lastCallTime_setup < I2C_LOOP_DELAY)
         return;
     lastCallTime_setup = millis();
     if (!setupSensorsSpin())
         return;
 
-    // Update sensor readings at defined delay
     if (millis() - lastCallTime_Cur < CUR_SENSOR_SPIN_DELAY)
         return;
     lastCallTime_Cur = millis();
